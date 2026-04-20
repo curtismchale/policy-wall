@@ -1,0 +1,28 @@
+.pw-embedded-content{
+  margin-left:20px;
+  padding-left:20px;
+  border-left:2px solid grey;
+}
+
+.pw-embedded-content-accordion{
+  margin:10px; padding:0;
+  border:2px solid lightgrey;
+}
+
+.pw-embedded-content-accordion .pw-accordion-title{
+  padding:5px;
+  background-color:lightgrey;
+}
+
+.pw-embedded-content-accordion .pw-accordion-title:hover{
+  cursor:pointer;
+}
+
+.pw-embedded-content .pw-accordion-content{
+  padding:10px;
+}
+
+.pw-button-wrapper a{text-decoration:none;}
+.pw-button-wrapper a:hover,
+.pw-button-wrapper a:focus
+{opacity:9}
