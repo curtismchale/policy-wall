@@ -1,13 +1,14 @@
 <?php
+
 /**
 Plugin Name: Policy Wall
 Plugin URI: https://sfndesign.ca
 Description: Forces acceptance of site policy before site content access
-Version: 2025.10.29.1043
+Version: 2026.04.20.1042
 Author: ProudCity, Curtis McHale
 Author URI: https://sfndesign.ca
 License: GPLv2 or later
-*/
+ */
 
 /*
 This program is free software; you can redistribute it and/or
@@ -44,7 +45,6 @@ class PolicyWall
             self::$instance = new PolicyWall();
             self::$instance->init();
         }
-
     } // instance
 
     /**
@@ -77,13 +77,12 @@ class PolicyWall
         add_filter('post_row_actions', array($this, 'agreedUsersAction'), 10, 2);
 
 
-        add_action( 'wp_ajax_exportUserCSV', array( $this, 'exportUserCSV') );
+        add_action('wp_ajax_exportUserCSV', array($this, 'exportUserCSV'));
 
         // Register hooks that are fired when the plugin is activated, deactivated, and uninstalled, respectively.
-        register_activation_hook(__FILE__, array( $this, 'activate' ));
-        register_deactivation_hook(__FILE__, array( $this, 'deactivate' ));
-        register_uninstall_hook(__FILE__, array( __CLASS__, 'uninstall' ));
-
+        register_activation_hook(__FILE__, array($this, 'activate'));
+        register_deactivation_hook(__FILE__, array($this, 'deactivate'));
+        register_uninstall_hook(__FILE__, array(__CLASS__, 'uninstall'));
     } // init
 
     /**
@@ -109,7 +108,7 @@ class PolicyWall
                 'page'      => 'pw-agreed', // matches submenu slug above
                 'post_id'   => absint($post->ID),
             ),
-            admin_url( 'edit.php' )
+            admin_url('edit.php')
         );
 
         $actions['view_extra_data'] = sprintf(
@@ -119,7 +118,6 @@ class PolicyWall
         );
 
         return $actions;
-
     }
 
     /**
@@ -158,11 +156,11 @@ class PolicyWall
         echo '<div class="wrap">';
 
         if ($post_id) {
-                $this->policySelect(absint($post_id));
-                $this->pwShowAgreedTable(absint($post_id));
-            } else {
-                $this->policySelect();
-            }
+            $this->policySelect(absint($post_id));
+            $this->pwShowAgreedTable(absint($post_id));
+        } else {
+            $this->policySelect();
+        }
 
         echo '</div>';
     }
@@ -179,25 +177,25 @@ class PolicyWall
      */
     public function policySelect($post_id = null)
     {
-        ?>
-            <h3>Select a Policy</h3>
+?>
+        <h3>Select a Policy</h3>
 
-            <form id="policyForm" method="GET"
-                action="<?php echo admin_url('edit.php'); ?>">
+        <form id="policyForm" method="GET"
+            action="<?php echo admin_url('edit.php'); ?>">
 
-                <input type="hidden" name="post_type" value="pw_policies">
-                <input type="hidden" name="page" value="pw-agreed">
+            <input type="hidden" name="post_type" value="pw_policies">
+            <input type="hidden" name="page" value="pw-agreed">
 
-                <label for="post_id">Choose a Policy</label>
-                <select name="post_id">
-                    <option value="">None</option>
-                    <?php echo $this->getPolicySelectOptions(absint($post_id)); ?>
-                </select>
-                <p class="description">Choose a policy to view users that have agreed to it.</p>
+            <label for="post_id">Choose a Policy</label>
+            <select name="post_id">
+                <option value="">None</option>
+                <?php echo $this->getPolicySelectOptions(absint($post_id)); ?>
+            </select>
+            <p class="description">Choose a policy to view users that have agreed to it.</p>
 
-                <button type="submit" class="button button-primary">Select Policy</button>
-            </form>
-        <?php
+            <button type="submit" class="button button-primary">Select Policy</button>
+        </form>
+    <?php
     }
 
     /**
@@ -212,43 +210,44 @@ class PolicyWall
      */
     public function pwShowAgreedTable($post_id)
     {
-        $nonce     = wp_create_nonce( 'exportUserCSV_' . $post_id );
+        $nonce     = wp_create_nonce('exportUserCSV_' . $post_id);
         $agreedUsers = get_post_meta(absint($post_id), '_users_agreed_to_policy', true);
-        ?>
-            <h3>Users that have agreed to <?php echo get_the_title(absint($post_id)); ?></h3>
+    ?>
+        <h3>Users that have agreed to <?php echo esc_html(get_the_title(absint($post_id))); ?></h3>
 
-            <table class="wp-list-table widefat fixed striped">
-                <thead>
-                    <tr>
-                        <th scope="col">User Name</th>
-                        <th scope="col">User Email</th>
-                        <th scope="col">Profile Link</th>
-                    </tr>
-                </thead>
+        <table class="wp-list-table widefat fixed striped">
+            <thead>
+                <tr>
+                    <th scope="col">User Name</th>
+                    <th scope="col">User Email</th>
+                    <th scope="col">Profile Link</th>
+                </tr>
+            </thead>
 
-                <tbody>
-                    <?php foreach($agreedUsers as $user) {
-                        $userData = get_userdata(absint($user));
-                        $email = $userData->user_email;
-                        $name = $userData->display_name;
-                    ?>
+            <tbody>
+                <?php foreach ($agreedUsers as $user) {
+                    $userData = get_userdata(absint($user));
+                    $email = $userData->user_email;
+                    $name = $userData->display_name;
+                ?>
                     <tr>
                         <td class="column-primary"><?php echo esc_attr($name); ?></td>
                         <td><?php echo esc_attr($email); ?></td>
                         <td><a href="<?php echo admin_url(); ?>/user-edit.php?user_id=<?php echo absint($user); ?>">View Profile</a></td>
                     </tr>
-                    <?php } // foreach ?>
-                </tbody>
-            </table>
-            <br />
-            <button
-                id="csvExport"
-                class="button button-primary"
-                data-postid="<?php echo esc_attr($post_id); ?>"
-                data-nonce="<?php echo esc_attr( $nonce ); ?>">
-                Export list to CSV
-            </button>
-        <?php
+                <?php } // foreach 
+                ?>
+            </tbody>
+        </table>
+        <br />
+        <button
+            id="csvExport"
+            class="button button-primary"
+            data-postid="<?php echo esc_attr($post_id); ?>"
+            data-nonce="<?php echo esc_attr($nonce); ?>">
+            Export list to CSV
+        </button>
+    <?php
     }
 
     /**
@@ -277,37 +276,55 @@ class PolicyWall
             wp_die('Invalid policy.');
         }
 
-        $policy_title = str_replace(' ', '-', get_the_title(absint($policy_id)));
+        $policy_title = sanitize_file_name(get_the_title(absint($policy_id)));
 
         // Tell the browser this is a CSV download
-        $filename = 'policy-'. esc_attr($policy_title) .'-' . absint($policy_id) . '-agreed-users-' . date('Y-m-d') . '.csv';
+        $filename = 'policy-' . $policy_title . '-' . absint($policy_id) . '-agreed-users-' . date('Y-m-d') . '.csv';
 
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=' . $filename);
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Pragma: no-cache');
         header('Expires: 0');
 
         $output = fopen('php://output', 'w');
 
         // CSV header row
-        fputcsv($output, array('User Name', 'Email') );
+        fputcsv($output, array('User Name', 'Email'));
 
         // ⬇️ Replace this with whatever logic you're already using in your metabox
         // to get "users that have agreed to this policy".
         $users = get_post_meta(absint($policy_id), '_users_agreed_to_policy', true);
 
-        foreach ( $users as $u ) {
+        foreach ($users as $u) {
             // Example assumes $user is a WP_User object
             $user = get_userdata(absint($u));
 
             fputcsv($output, array(
+                self::sanitize_csv_cell($user->display_name),
                 sanitize_email($user->user_email),
-                esc_attr($user->display_name),
-            ) );
+            ));
         }
 
-        fclose( $output );
+        fclose($output);
         exit; // or wp_die()
+    }
+
+    /**
+     * Prevents spreadsheet formula injection in CSV exports.
+     *
+     * Spreadsheet applications (Excel, Google Sheets) treat cell values that
+     * begin with =, +, -, or @ as formulas. Prefixing with a tab character
+     * forces the cell to be treated as text without altering the visible value.
+     *
+     * @param string $value The raw cell value.
+     * @return string The sanitized value, safe for fputcsv().
+     */
+    private static function sanitize_csv_cell(string $value): string
+    {
+        if (in_array(mb_substr($value, 0, 1), ['=', '+', '-', '@'], true)) {
+            return "\t" . $value;
+        }
+        return $value;
     }
 
     public function getPolicySelectOptions($post_id = null)
@@ -321,8 +338,8 @@ class PolicyWall
 
         $policies = get_posts($args);
 
-        foreach($policies as $p){
-            $html .= '<option value="'. absint($p) .'" '. selected(absint($post_id), absint($p), false).'>'. get_the_title(absint($p)) .'</option>';
+        foreach ($policies as $p) {
+            $html .= '<option value="' . absint($p) . '" ' . selected(absint($post_id), absint($p), false) . '>' . esc_html(get_the_title(absint($p))) . '</option>';
         }
 
         return $html;
@@ -365,58 +382,58 @@ class PolicyWall
             $policy_page_id = null;
         }
 
-        ?>
-            <div class="wrap">
-                <h1>Policy Wall Instructions</h1>
-                <p>To use Policy Wall you need to setup a new Policy. Only the most recent policy is used to block a user's access to the site.</p>
-                <p>Every time you add a new policy to the site it will become active and users must agree to it to use your site.</p>
-                <p>Site Administrators are exempt from agreeing to policies.</p>
+    ?>
+        <div class="wrap">
+            <h1>Policy Wall Instructions</h1>
+            <p>To use Policy Wall you need to setup a new Policy. Only the most recent policy is used to block a user's access to the site.</p>
+            <p>Every time you add a new policy to the site it will become active and users must agree to it to use your site.</p>
+            <p>Site Administrators are exempt from agreeing to policies.</p>
 
-                <h2>Shortcodes</h2>
-                <p>Content from other parts of your site can be imported with the shortcodes below. The <code>embed</code> shortcodes should <strong>only</strong> be used inside the Policy Custom Post type entries not on a custom policy page.</p>
+            <h2>Shortcodes</h2>
+            <p>Content from other parts of your site can be imported with the shortcodes below. The <code>embed</code> shortcodes should <strong>only</strong> be used inside the Policy Custom Post type entries not on a custom policy page.</p>
 
-                <h3><code>[pw_show_latest_policy]</code></h3>
-                <p><code>[pw_show_latest_policy]</code>: Shows the most recently published policy on the page along with save functions. Users will be redirected here when a new policy is published.</p>
-                <p><strong>Note:</strong> You MUST set the policy page ID if you want to use a generic policy page as your default redirection location. Without setting this users will be redirected to the URL of the most recent policy.</p>
+            <h3><code>[pw_show_latest_policy]</code></h3>
+            <p><code>[pw_show_latest_policy]</code>: Shows the most recently published policy on the page along with save functions. Users will be redirected here when a new policy is published.</p>
+            <p><strong>Note:</strong> You MUST set the policy page ID if you want to use a generic policy page as your default redirection location. Without setting this users will be redirected to the URL of the most recent policy.</p>
 
-                <h3><code>[pw_embed_content]</code></h3>
-                <p><code>[pw_embed_content]</code>: Used to embed the full content of other pages.</p>
-                <p><code>[pw_embed_content contentid="12"]</code>: Would be used to embed the content of a page/post with the id of <code>12</code></p>
-                <p><strong>Example</strong>: Given an admin url like:<code>https://example.com/wp-admin/post.php?post=12029&action=edit</code> the <code>contentid</code> is <code>12029</code>. This would only embed any content in the standard WordPress text box.</p>
+            <h3><code>[pw_embed_content]</code></h3>
+            <p><code>[pw_embed_content]</code>: Used to embed the full content of other pages.</p>
+            <p><code>[pw_embed_content contentid="12"]</code>: Would be used to embed the content of a page/post with the id of <code>12</code></p>
+            <p><strong>Example</strong>: Given an admin url like:<code>https://example.com/wp-admin/post.php?post=12029&action=edit</code> the <code>contentid</code> is <code>12029</code>. This would only embed any content in the standard WordPress text box.</p>
 
-                <h3><code>[pw_embed_content_accordion]</code></h3>
-                <p><code>[pw_embed_content_accordion]</code>: Used to embed the full content of other pages inside an accordion that can be opened by users to view the content. Use the <code>title</code> option to set a title for the accordion.</p>
-                <p><strong>Example:</strong></p>
-                <p><code>[pw_embed_content_accordion]</code>: Embeds the content and uses the standard title of the page as the accordion title.</p>
-                <p><code>[pw_embed_content_accordion title="Custom Title"]</code>: Embeds the content and uses "Custom Title" as the accordion title.</p>
+            <h3><code>[pw_embed_content_accordion]</code></h3>
+            <p><code>[pw_embed_content_accordion]</code>: Used to embed the full content of other pages inside an accordion that can be opened by users to view the content. Use the <code>title</code> option to set a title for the accordion.</p>
+            <p><strong>Example:</strong></p>
+            <p><code>[pw_embed_content_accordion]</code>: Embeds the content and uses the standard title of the page as the accordion title.</p>
+            <p><code>[pw_embed_content_accordion title="Custom Title"]</code>: Embeds the content and uses "Custom Title" as the accordion title.</p>
 
-                <p><strong>Example:</strong></p>
-                <p><code>[pw_embed_content_accordion]</code>: Embeds the content and uses the standard title of the page as the accordion title.</p>
-                <p><code>[pw_embed_content_accordion title="Custom Title"]</code>: Embeds the content and uses "Custom Title" as the accordion title.</p>
+            <p><strong>Example:</strong></p>
+            <p><code>[pw_embed_content_accordion]</code>: Embeds the content and uses the standard title of the page as the accordion title.</p>
+            <p><code>[pw_embed_content_accordion title="Custom Title"]</code>: Embeds the content and uses "Custom Title" as the accordion title.</p>
 
-                <h2>Custom Policy Page ID Form</h2>
-                <p><strong>Example</strong>: Given a url like <code>https://example.com/wp-admin/post.php?post=12029&action=edit</code> the content ID is <code>12029</code>. That ID would go in the field at the bottom of this page.</p>
-                <p>Setting the ID to <code>0</code> removes the association with a custom page.</p>
+            <h2>Custom Policy Page ID Form</h2>
+            <p><strong>Example</strong>: Given a url like <code>https://example.com/wp-admin/post.php?post=12029&action=edit</code> the content ID is <code>12029</code>. That ID would go in the field at the bottom of this page.</p>
+            <p>Setting the ID to <code>0</code> removes the association with a custom page.</p>
 
-                <form id="pw_custom_policy_page_id_form">
-                    <table class="form-table" role="presentation">
-                        <tr>
+            <form id="pw_custom_policy_page_id_form">
+                <table class="form-table" role="presentation">
+                    <tr>
                         <th><label for="policy_page_number">Insert the post_id for the custom policy page.</label></th>
                         <td><input id="policy_page_number" name="policy_page_number" value="<?php echo esc_attr($policy_page_id); ?>" type="number"></input></td>
-                        </tr>
-                    </table>
-                    <?php submit_button(
-                        'Save Policy Page ID', // button text
-                        'primary', // type
-                        '', // name
-                        true, // wrap
-                        array( 'id' => 'policy_page_number_submit'),
-                    ); ?>
-                    <span class="pwa-spinner hidden"><img src="<?php admin_url('images/spinner.gif') ?>"/></span>
-                    <p id="pw_user_feedback"></p>
-                </form>
-            </div><!-- /.wrap -->
-        <?php
+                    </tr>
+                </table>
+                <?php submit_button(
+                    'Save Policy Page ID', // button text
+                    'primary', // type
+                    '', // name
+                    true, // wrap
+                    array('id' => 'policy_page_number_submit'),
+                ); ?>
+                <span class="pwa-spinner hidden"><img src="<?php admin_url('images/spinner.gif') ?>" /></span>
+                <p id="pw_user_feedback"></p>
+            </form>
+        </div><!-- /.wrap -->
+<?php
     }
 
     /**
@@ -437,6 +454,11 @@ class PolicyWall
     {
         check_ajax_referer('pwa_ajax_nonce', 'security');
 
+        if (! current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Unauthorized.']);
+            return;
+        }
+
         $success = false;
         $message = 'We were unable to save the custom Policy Page ID. Please contact your site administrator.';
 
@@ -455,7 +477,6 @@ class PolicyWall
         );
 
         wp_send_json_success($data);
-
     } // savePolicyAgreement
 
     /**
@@ -475,6 +496,11 @@ class PolicyWall
     public function savePolicyAgreement()
     {
         check_ajax_referer('pw_ajax_nonce', 'security');
+
+        if (absint($_POST['userId']) !== get_current_user_id()) {
+            wp_send_json_error(['message' => 'Unauthorized.']);
+            return;
+        }
 
         $success = false;
         $message = 'We were unable to save your agreement to the policy. Please contact your site administrator.';
@@ -496,7 +522,6 @@ class PolicyWall
         );
 
         wp_send_json_success($data);
-
     } // savePolicyAgreement
 
     /**
@@ -519,7 +544,7 @@ class PolicyWall
         $savedToUser = false;
         $userAgreements = get_user_meta(absint($userId), '_policy_agreed_to', false);
 
-        If (!in_array(absint($policyId), $userAgreements, true)) {
+        if (!in_array(absint($policyId), $userAgreements, true)) {
             $savedToUser = add_user_meta(absint($userId), '_policy_agreed_to', absint($policyId));
         } else {
             return true; // it was already saved
@@ -534,7 +559,6 @@ class PolicyWall
         }
 
         return (bool) $savedToUser;
-
     } // _savePolicyToUser
 
     /**
@@ -570,7 +594,6 @@ class PolicyWall
         $saved = update_post_meta(absint($policyId), '_users_agreed_to_policy', $agreedUser);
 
         return (bool) $saved;
-
     } // _saveUserToPolicy
 
     /**
@@ -593,7 +616,8 @@ class PolicyWall
         $screen = get_current_screen();
 
         // only enqueue on the page we need it on
-        if ('pw_policies_page_pw-instructions' !== $screen->id
+        if (
+            'pw_policies_page_pw-instructions' !== $screen->id
             && 'pw_policies_page_pw-agreed' !== $screen->id
         ) {
             return;
@@ -612,12 +636,13 @@ class PolicyWall
         );
 
         wp_localize_script(
-            'pw_admin_scripts', 'PWA', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'pwa_ajax_nonce' => wp_create_nonce('pwa_ajax_nonce'),
+            'pw_admin_scripts',
+            'PWA',
+            array(
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'pwa_ajax_nonce' => wp_create_nonce('pwa_ajax_nonce'),
             )
         );
-
     }
 
     /**
@@ -637,7 +662,7 @@ class PolicyWall
         // version plugin
         $plugin_data = get_plugin_data(__FILE__);
 
-            // styles plugin
+        // styles plugin
         wp_enqueue_style(
             'pw_frontent_styles',
             plugins_url('/policy-wall/assets/pw-frontend-styles.css'),
@@ -659,12 +684,13 @@ class PolicyWall
         );
 
         wp_localize_script(
-            'pw_front_scripts', 'PW', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'pw_ajax_nonce' => wp_create_nonce('pw_ajax_nonce'),
+            'pw_front_scripts',
+            'PW',
+            array(
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'pw_ajax_nonce' => wp_create_nonce('pw_ajax_nonce'),
             )
         );
-
     }
 
     /**
@@ -676,7 +702,6 @@ class PolicyWall
     {
 
         define('POLICY_WALL_PLUGIN_DIR', plugin_dir_path(__FILE__));
-
     }
 
     /**
@@ -709,30 +734,21 @@ class PolicyWall
      *
      * @param   bool    $network_wide   TRUE if WPMU 'super admin' uses Network Activate option
      */
-    public function activate($network_wide)
-    {
-
-    } // activate
+    public function activate($network_wide) {} // activate
 
     /**
      * Fired when plugin is deactivated
      *
      * @param   bool    $network_wide   TRUE if WPMU 'super admin' uses Network Activate option
      */
-    public function deactivate($network_wide)
-    {
-
-    } // deactivate
+    public function deactivate($network_wide) {} // deactivate
 
     /**
      * Fired when plugin is uninstalled
      *
      * @param   bool    $network_wide   TRUE if WPMU 'super admin' uses Network Activate option
      */
-    public function uninstall($network_wide)
-    {
-
-    } // uninstall
+    public function uninstall($network_wide) {} // uninstall
 
 } // PolicyWall
 

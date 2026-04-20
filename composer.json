@@ -1,0 +1,19 @@
+{
+    "name": "proudcity/policy-wall",
+    "description": "Forces acceptance of site policy before site content access",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0+",
+    "require": {
+        "php": ">=8.3"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0",
+        "brain/monkey": "^2.6"
+    },
+    "scripts": {
+        "test": "phpunit --testdox"
+    },
+    "config": {
+        "allow-plugins": {}
+    }
+}

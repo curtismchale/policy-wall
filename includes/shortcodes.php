@@ -82,7 +82,7 @@ class PolicyWallShortcodes
 
         $html .= '<div class="pw-embedded-content pw-embedded-content-accordion">';
         if (false === (bool) $a['title']) {
-            $html .= '<h4 class="pw-accordion-title">'. get_the_title(absint($a['contentid'])) .'</h4>';
+            $html .= '<h4 class="pw-accordion-title">'. esc_html(get_the_title(absint($a['contentid']))) .'</h4>';
         } else {
             $html .= '<h4 class="pw-accordion-title">'. esc_attr($a['title']) .'</h4>';
         }
@@ -118,7 +118,7 @@ class PolicyWallShortcodes
         $html = '';
 
         $html .= '<div class="pw-embedded-content">';
-            $html .= '<h4>'. get_the_title(absint($a['contentid'])) .'</h4>';
+            $html .= '<h4>'. esc_html(get_the_title(absint($a['contentid']))) .'</h4>';
             $html .= apply_filters('the_content', $post->post_content);
         $html .= '</div><!-- /.pw-embedded-content -->';
 
