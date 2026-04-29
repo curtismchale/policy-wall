@@ -62,4 +62,7 @@ namespace {
     if (!function_exists('apply_filters')) {
         function apply_filters(string $_tag, mixed $value): mixed { return $value; }
     }
+    if (!function_exists('update_user_meta')) {
+        function update_user_meta(): mixed { return true; }
+    }
 }

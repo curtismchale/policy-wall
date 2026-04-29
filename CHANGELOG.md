@@ -1,3 +1,9 @@
+## 2026-04-29
+- CSV export: replaced display name with login username; column renamed to `Username`
+- CSV export: added `Agreed Date` column (format `Y-m-d H:i:s`) populated from new per-user timestamp
+- CSV export: skips rows where the user account no longer exists
+- `savePolicyToUser()` now records agreement timestamp in user meta `_policy_agreed_date_{policyId}`
+
 ## 2026-04-20
 
 - High: Fixed IDOR in `savePolicyAgreement` — added identity check so a logged-in user can only save their own policy agreement, not another user's

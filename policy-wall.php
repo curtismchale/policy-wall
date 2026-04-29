@@ -289,19 +289,23 @@ class PolicyWall
         $output = fopen('php://output', 'w');
 
         // CSV header row
-        fputcsv($output, array('User Name', 'Email'));
+        fputcsv($output, array('Username', 'Email', 'Agreed Date'));
 
-        // ⬇️ Replace this with whatever logic you're already using in your metabox
-        // to get "users that have agreed to this policy".
         $users = get_post_meta(absint($policy_id), '_users_agreed_to_policy', true);
 
         foreach ($users as $u) {
-            // Example assumes $user is a WP_User object
             $user = get_userdata(absint($u));
+            if (false === $user) {
+                continue;
+            }
+
+            $timestamp = get_user_meta($user->ID, '_policy_agreed_date_' . absint($policy_id), true);
+            $agreed_date = $timestamp ? wp_date('Y-m-d H:i:s', (int) $timestamp) : '';
 
             fputcsv($output, array(
-                self::sanitize_csv_cell($user->display_name),
+                self::sanitize_csv_cell($user->user_login),
                 sanitize_email($user->user_email),
+                self::sanitize_csv_cell($agreed_date),
             ));
         }
 
@@ -546,6 +550,7 @@ class PolicyWall
 
         if (!in_array(absint($policyId), $userAgreements, true)) {
             $savedToUser = add_user_meta(absint($userId), '_policy_agreed_to', absint($policyId));
+            update_user_meta(absint($userId), '_policy_agreed_date_' . absint($policyId), time());
         } else {
             return true; // it was already saved
         }
