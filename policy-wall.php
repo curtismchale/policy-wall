@@ -569,26 +569,10 @@ class PolicyWall
      */
     public static function savePolicyToUser($userId, $policyId)
     {
+        $savedToUser = update_user_meta(absint($userId), '_policy_agreed_to', absint($policyId));
+        update_user_meta(absint($userId), '_policy_agreed_date_' . absint($policyId), time());
 
-        $savedToUser = false;
-        $userAgreements = get_user_meta(absint($userId), '_policy_agreed_to', false);
-
-        if (!in_array(absint($policyId), $userAgreements, true)) {
-            $savedToUser = add_user_meta(absint($userId), '_policy_agreed_to', absint($policyId));
-            update_user_meta(absint($userId), '_policy_agreed_date_' . absint($policyId), time());
-        } else {
-            return true; // it was already saved
-        }
-
-        if ($savedToUser !== false) {
-            $savedToUser = true; // saved properly
-        } else {
-            // add_user_meta may return many values but only TRUE means it was saved
-            // so all others are a failure value of some sort
-            $savedToUser = false;
-        }
-
-        return (bool) $savedToUser;
+        return $savedToUser !== false;
     } // _savePolicyToUser
 
     /**

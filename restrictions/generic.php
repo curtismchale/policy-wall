@@ -56,6 +56,7 @@ class PwGeneric
 
         add_action('save_post', [__CLASS__, 'invalidatePolicyCacheKey'], 10, 3);
         add_action('login_redirect', [__CLASS__, 'checkAgreementOnLogin'], 10, 3);
+        add_action('template_redirect', [__CLASS__, 'enforceAgreementForActiveSession']);
     } // init
 
 
@@ -111,6 +112,58 @@ class PwGeneric
         } else {
             return self::getPolicyAgreementPageUrl();
         }
+    }
+
+    /**
+     * Redirects already-logged-in users to the policy agreement page if they
+     * have not agreed to the current policy version.
+     *
+     * Runs on template_redirect so it catches users who were already logged in
+     * when a new policy was published, not just users logging in fresh.
+     *
+     * A grace period (in seconds) can be set via the pw_policy_grace_period filter.
+     * When non-zero, users are only redirected once the current policy is older than
+     * the grace period — letting active sessions finish before enforcement kicks in.
+     * Default is 0 (redirect immediately on the next page load).
+     *
+     * Example — allow a 24-hour grace period:
+     *   add_filter( 'pw_policy_grace_period', fn() => DAY_IN_SECONDS );
+     *
+     * Skipped for: logged-out visitors, admin pages, AJAX requests, and the
+     * policy page itself (to prevent redirect loops).
+     *
+     * @since  2026.04.29
+     * @author Curtis <curtis@curtismchale.ca>
+     *
+     * @return void
+     */
+    public static function enforceAgreementForActiveSession()
+    {
+        if (! is_user_logged_in() || is_admin() || wp_doing_ajax()) {
+            return;
+        }
+
+        $policy_page_id = get_option('pw_policy_page_id') ?: self::getCurrentAgreementId();
+        if (is_page(absint($policy_page_id))) {
+            return;
+        }
+
+        $user = wp_get_current_user();
+        if (self::hasUserAgreed($user)) {
+            return;
+        }
+
+        $grace_period = (int) apply_filters('pw_policy_grace_period', 0);
+        if ($grace_period > 0) {
+            $policy    = get_post(self::getCurrentAgreementId());
+            $published = $policy ? strtotime($policy->post_date_gmt) : 0;
+            if ($published && (time() - $published) < $grace_period) {
+                return;
+            }
+        }
+
+        wp_safe_redirect(self::getPolicyAgreementPageUrl());
+        exit;
     }
 
     /**

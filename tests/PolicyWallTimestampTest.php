@@ -36,49 +36,41 @@ class PolicyWallTimestampTest extends TestCase
     // -------------------------------------------------------------------------
 
     /**
-     * On first agreement, update_user_meta must be called once with a key of
-     * _policy_agreed_date_{policyId} and an integer close to time().
+     * savePolicyToUser() must call update_user_meta twice: once to store the
+     * agreed policy ID and once to store the agreement timestamp.
      */
-    public function test_savePolicyToUser_writes_timestamp_on_first_save(): void
+    public function test_savePolicyToUser_writes_agreement_and_timestamp(): void
     {
         $userId   = 7;
         $policyId = 42;
-
-        Functions\when('get_user_meta')->justReturn([]);
-        Functions\when('add_user_meta')->justReturn(1);
 
         Functions\expect('update_user_meta')
             ->once()
-            ->with(
-                $userId,
-                '_policy_agreed_date_' . $policyId,
-                \Mockery::type('int')
-            );
+            ->with($userId, '_policy_agreed_to', $policyId)
+            ->andReturn(true);
 
-        PolicyWall::savePolicyToUser($userId, $policyId);
+        Functions\expect('update_user_meta')
+            ->once()
+            ->with($userId, '_policy_agreed_date_' . $policyId, \Mockery::type('int'))
+            ->andReturn(true);
 
-        $this->addToAssertionCount(1);
+        $result = PolicyWall::savePolicyToUser($userId, $policyId);
+
+        $this->assertTrue($result);
     }
 
-    // -------------------------------------------------------------------------
-    // savePolicyToUser() — timestamp NOT overwritten on duplicate call
-    // -------------------------------------------------------------------------
-
     /**
-     * When the policy is already in the user's _policy_agreed_to meta,
-     * savePolicyToUser() returns early before calling update_user_meta, so the
-     * original timestamp is preserved.
+     * Re-agreeing to the same or a new policy always overwrites the stored
+     * agreement ID and timestamp — there is no early-return for duplicates.
      */
-    public function test_savePolicyToUser_does_not_overwrite_timestamp_on_duplicate(): void
+    public function test_savePolicyToUser_overwrites_on_repeat_call(): void
     {
         $userId   = 7;
-        $policyId = 42;
+        $policyId = 99;
 
-        // Simulate the policy already being recorded for this user.
-        Functions\when('get_user_meta')->justReturn([$policyId]);
-
-        Functions\expect('update_user_meta')->never();
-        Functions\expect('add_user_meta')->never();
+        Functions\expect('update_user_meta')
+            ->twice()
+            ->andReturn(true);
 
         $result = PolicyWall::savePolicyToUser($userId, $policyId);
 

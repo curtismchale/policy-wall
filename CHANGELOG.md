@@ -1,8 +1,28 @@
 ## 2026-04-29
-- CSV export: replaced display name with login username; column renamed to `Username`
-- CSV export: added `Agreed Date` column (format `Y-m-d H:i:s`) populated from new per-user timestamp
-- CSV export: skips rows where the user account no longer exists
+
+### CSV export improvements
+- Replaced display name with login username (`user_login`); column renamed to `Username`
+- Added `Agreed Date` column (format `Y-m-d H:i:s`, site timezone) populated from new per-user timestamp
+- Skips rows where the user account no longer exists
+- Email cell now runs through `sanitize_csv_cell()` to prevent formula injection
+- `savePolicyToUser()` switched from `add_user_meta` to `update_user_meta` for `_policy_agreed_to` — ensures `get_user_meta(..., true)` always returns the most recently agreed policy ID rather than the first; fixes a redirect loop for users who had agreed to multiple policies
 - `savePolicyToUser()` now records agreement timestamp in user meta `_policy_agreed_date_{policyId}`
+
+### Active-session policy enforcement
+- Added `template_redirect` hook (`enforceAgreementForActiveSession`) — already-logged-in users are now redirected to the policy page when a new policy is published, without requiring a logout/login cycle
+- Added `pw_policy_grace_period` filter (default `0`) — set to a number of seconds to allow active sessions to finish before enforcement kicks in (e.g. `add_filter('pw_policy_grace_period', fn() => DAY_IN_SECONDS)` for a 24-hour grace period)
+
+### Security fixes
+- Medium: `savePolicyAgreement()` — dropped `$_POST['userId']` trust; now uses `get_current_user_id()` and requires `is_user_logged_in()`; validates `policyId` is a published `pw_policies` post
+- Medium: `pw_export_users_cap` filter — changed signature to pass capability string instead of bool, preventing a permissive `__return_true` hook from granting export access to any user
+- Medium: Agreed Users admin page — capability raised from `edit_posts` to `manage_options` (filterable via `pw_view_agreed_cap`); added `current_user_can()` guard inside `pwAgreed()` callback
+- Medium: `embedContent` / `embedContentAccordion` shortcodes — added `post_status` and `post_password` checks; draft, private, and password-protected posts no longer render to front-end visitors; null post guard added to `showLatestPolicy()`
+- Low: `savePolicyPageIdNumber()` — validates post exists and is published before storing in `pw_policy_page_id` option
+- Low: `foreach` on `get_post_meta` result — added `is_array()` guard in `pwShowAgreedTable()` and `exportUserCSV()` to prevent PHP 8 warnings on empty meta
+- Low: `esc_attr()` → `esc_html()` for text-node output in `pwShowAgreedTable()` and `renderAgreedMetabox()`
+- Low: Fixed double-slash and missing `esc_url()` on `admin_url()` output in `policySelect()`, `pwShowAgreedTable()`, and `renderAgreedMetabox()`
+- Low: Fixed missing `echo` on spinner `<img src>` in instructions page
+- Low: Front-end scripts and nonce no longer enqueued for logged-out users
 
 ## 2026-04-20
 

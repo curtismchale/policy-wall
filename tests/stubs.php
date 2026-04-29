@@ -12,6 +12,9 @@
  */
 
 namespace {
+    if (! defined('DAY_IN_SECONDS')) {
+        define('DAY_IN_SECONDS', 86400);
+    }
     if (!function_exists('add_action')) {
         function add_action() { return true; }
     }
@@ -86,5 +89,35 @@ namespace {
     }
     if (!function_exists('get_posts')) {
         function get_posts(): array { return []; }
+    }
+    if (!function_exists('is_user_logged_in')) {
+        function is_user_logged_in(): bool { return false; }
+    }
+    if (!function_exists('is_admin')) {
+        function is_admin(): bool { return false; }
+    }
+    if (!function_exists('wp_doing_ajax')) {
+        function wp_doing_ajax(): bool { return false; }
+    }
+    if (!function_exists('is_page')) {
+        function is_page(): bool { return false; }
+    }
+    if (!function_exists('wp_get_current_user')) {
+        function wp_get_current_user(): object { return new stdClass(); }
+    }
+    if (!function_exists('wp_safe_redirect')) {
+        function wp_safe_redirect(): void {}
+    }
+    if (!function_exists('get_option')) {
+        function get_option(): mixed { return false; }
+    }
+    if (!function_exists('get_permalink')) {
+        function get_permalink(): string { return ''; }
+    }
+    if (!function_exists('user_can')) {
+        function user_can(): bool { return false; }
+    }
+    if (!function_exists('get_user_meta')) {
+        function get_user_meta(): mixed { return ''; }
     }
 }
