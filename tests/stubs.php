@@ -65,4 +65,26 @@ namespace {
     if (!function_exists('update_user_meta')) {
         function update_user_meta(): mixed { return true; }
     }
+    if (!function_exists('shortcode_atts')) {
+        function shortcode_atts(array $pairs, mixed $atts): array {
+            $atts = (array) $atts;
+            $out  = [];
+            foreach ($pairs as $name => $default) {
+                $out[$name] = array_key_exists($name, $atts) ? $atts[$name] : $default;
+            }
+            return $out;
+        }
+    }
+    if (!function_exists('get_post')) {
+        function get_post(): mixed { return null; }
+    }
+    if (!function_exists('get_transient')) {
+        function get_transient(): mixed { return false; }
+    }
+    if (!function_exists('set_transient')) {
+        function set_transient(): bool { return true; }
+    }
+    if (!function_exists('get_posts')) {
+        function get_posts(): array { return []; }
+    }
 }

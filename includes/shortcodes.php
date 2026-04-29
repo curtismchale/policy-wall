@@ -78,6 +78,10 @@ class PolicyWallShortcodes
 
         $post = get_post(absint($a['contentid']));
 
+        if (! $post || $post->post_status !== 'publish' || ! empty($post->post_password)) {
+            return '';
+        }
+
         $html = '';
 
         $html .= '<div class="pw-embedded-content pw-embedded-content-accordion">';
@@ -114,6 +118,10 @@ class PolicyWallShortcodes
         );
 
         $post = get_post(absint($a['contentid']));
+
+        if (! $post || $post->post_status !== 'publish' || ! empty($post->post_password)) {
+            return '';
+        }
 
         $html = '';
 
@@ -152,6 +160,11 @@ class PolicyWallShortcodes
 
         $latestPolicyId = PwGeneric::getCurrentAgreementId();
         $postObject = get_post(absint($latestPolicyId));
+
+        if (! $postObject) {
+            return '';
+        }
+
         $postContent = $postObject->post_content;
 
         $html = '';

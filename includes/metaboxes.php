@@ -105,9 +105,9 @@ class PolicyWallMetaboxes
             ?>
 
             <li>
-                <?php echo esc_attr($name); ?>
-                (<?php echo esc_attr($email); ?>)
-                - <a href="<?php echo admin_url(); ?>/user-edit.php?user_id=<?php echo absint($u); ?>">View Profile</a>
+                <?php echo esc_html($name); ?>
+                (<?php echo esc_html($email); ?>)
+                - <a href="<?php echo esc_url(admin_url('user-edit.php?user_id=' . absint($u))); ?>">View Profile</a>
             </li>
 
         <?php } ?>

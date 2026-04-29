@@ -4,7 +4,7 @@
 Plugin Name: Policy Wall
 Plugin URI: https://sfndesign.ca
 Description: Forces acceptance of site policy before site content access
-Version: 2026.04.20.1042
+Version: 2026.04.29.1044
 Author: ProudCity, Curtis McHale
 Author URI: https://sfndesign.ca
 License: GPLv2 or later
@@ -134,7 +134,7 @@ class PolicyWall
             'edit.php?post_type=pw_policies', // parent menu slug
             'List of Agreed Users', // page title
             'Agreed Users', // title in menu
-            'edit_posts', // capability
+            apply_filters('pw_view_agreed_cap', 'manage_options'), // capability
             'pw-agreed', // slug
             [$this, 'pwAgreed'],
         );
@@ -150,6 +150,9 @@ class PolicyWall
      */
     public function pwAgreed()
     {
+        if (! current_user_can(apply_filters('pw_view_agreed_cap', 'manage_options'))) {
+            wp_die(esc_html__('You do not have permission to view this page.', 'policywall'));
+        }
 
         $post_id = isset($_GET['post_id']) ? absint($_GET['post_id']) : 0;
 
@@ -181,7 +184,7 @@ class PolicyWall
         <h3>Select a Policy</h3>
 
         <form id="policyForm" method="GET"
-            action="<?php echo admin_url('edit.php'); ?>">
+            action="<?php echo esc_url(admin_url('edit.php')); ?>">
 
             <input type="hidden" name="post_type" value="pw_policies">
             <input type="hidden" name="page" value="pw-agreed">
@@ -212,6 +215,11 @@ class PolicyWall
     {
         $nonce     = wp_create_nonce('exportUserCSV_' . $post_id);
         $agreedUsers = get_post_meta(absint($post_id), '_users_agreed_to_policy', true);
+
+        if (! is_array($agreedUsers) || empty($agreedUsers)) {
+            echo '<p>' . esc_html__('No users have agreed to this policy yet.', 'policywall') . '</p>';
+            return;
+        }
     ?>
         <h3>Users that have agreed to <?php echo esc_html(get_the_title(absint($post_id))); ?></h3>
 
@@ -231,9 +239,9 @@ class PolicyWall
                     $name = $userData->display_name;
                 ?>
                     <tr>
-                        <td class="column-primary"><?php echo esc_attr($name); ?></td>
-                        <td><?php echo esc_attr($email); ?></td>
-                        <td><a href="<?php echo admin_url(); ?>/user-edit.php?user_id=<?php echo absint($user); ?>">View Profile</a></td>
+                        <td class="column-primary"><?php echo esc_html($name); ?></td>
+                        <td><?php echo esc_html($email); ?></td>
+                        <td><a href="<?php echo esc_url(admin_url('user-edit.php?user_id=' . absint($user))); ?>">View Profile</a></td>
                     </tr>
                 <?php } // foreach 
                 ?>
@@ -261,7 +269,8 @@ class PolicyWall
     public function exportUserCSV()
     {
 
-        if (! apply_filters('pw_export_users_cap', current_user_can('manage_options'))) { // adjust capability as needed
+        $export_cap = apply_filters('pw_export_users_cap', 'manage_options');
+        if (! current_user_can($export_cap)) {
             wp_die('You do not have permission to export this data.');
         }
 
@@ -293,6 +302,11 @@ class PolicyWall
 
         $users = get_post_meta(absint($policy_id), '_users_agreed_to_policy', true);
 
+        if (! is_array($users) || empty($users)) {
+            fclose($output);
+            exit;
+        }
+
         foreach ($users as $u) {
             $user = get_userdata(absint($u));
             if (false === $user) {
@@ -304,7 +318,7 @@ class PolicyWall
 
             fputcsv($output, array(
                 self::sanitize_csv_cell($user->user_login),
-                sanitize_email($user->user_email),
+                self::sanitize_csv_cell(sanitize_email($user->user_email)),
                 self::sanitize_csv_cell($agreed_date),
             ));
         }
@@ -433,7 +447,7 @@ class PolicyWall
                     true, // wrap
                     array('id' => 'policy_page_number_submit'),
                 ); ?>
-                <span class="pwa-spinner hidden"><img src="<?php admin_url('images/spinner.gif') ?>" /></span>
+                <span class="pwa-spinner hidden"><img src="<?php echo esc_url(admin_url('images/spinner.gif')); ?>" /></span>
                 <p id="pw_user_feedback"></p>
             </form>
         </div><!-- /.wrap -->
@@ -468,6 +482,14 @@ class PolicyWall
 
         $policyId = absint($_POST['policyId']);
 
+        if ($policyId !== 0) {
+            $post = get_post($policyId);
+            if (! $post || $post->post_status !== 'publish') {
+                wp_send_json_error(['message' => 'Invalid policy page.']);
+                return;
+            }
+        }
+
         $policIdSaved = update_option('pw_policy_page_id', absint($policyId), false);
 
         if (true === $policIdSaved) {
@@ -501,31 +523,34 @@ class PolicyWall
     {
         check_ajax_referer('pw_ajax_nonce', 'security');
 
-        if (absint($_POST['userId']) !== get_current_user_id()) {
+        if (! is_user_logged_in()) {
             wp_send_json_error(['message' => 'Unauthorized.']);
+            return;
+        }
+
+        $userId   = get_current_user_id();
+        $policyId = absint($_POST['policyId'] ?? 0);
+
+        if ($policyId === 0 || get_post_type($policyId) !== 'pw_policies') {
+            wp_send_json_error(['message' => 'Invalid policy.']);
             return;
         }
 
         $success = false;
         $message = 'We were unable to save your agreement to the policy. Please contact your site administrator.';
 
-        $userId = absint($_POST['userId']);
-        $policyId = absint($_POST['policyId']);
-
-        $userSavedToPolicy = self::saveUserToPolicy(absint($userId), absint($policyId));
-        $policySavedToUser = self::savePolicyToUser(absint($userId), absint($policyId));
+        $userSavedToPolicy = self::saveUserToPolicy($userId, $policyId);
+        $policySavedToUser = self::savePolicyToUser($userId, $policyId);
 
         if (true === $userSavedToPolicy && true === $policySavedToUser) {
             $success = true;
             $message = 'Agreement to the policy has been saved.';
         }
 
-        $data = array(
+        wp_send_json_success(array(
             'success' => (bool) $success,
             'message' => wp_kses_post($message),
-        );
-
-        wp_send_json_success($data);
+        ));
     } // savePolicyAgreement
 
     /**
@@ -663,6 +688,9 @@ class PolicyWall
      */
     public function enqueue()
     {
+        if (! is_user_logged_in()) {
+            return;
+        }
 
         // version plugin
         $plugin_data = get_plugin_data(__FILE__);

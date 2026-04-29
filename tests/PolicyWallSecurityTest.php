@@ -26,25 +26,23 @@ class PolicyWallSecurityTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
-    // Finding 1 — High: IDOR in savePolicyAgreement
+    // Finding 1 — High: unauthenticated meta write via savePolicyAgreement
+    // The original IDOR used $_POST['userId']; that parameter is now ignored.
+    // The fix requires is_user_logged_in() and a valid pw_policies post type.
     // -------------------------------------------------------------------------
 
     /**
-     * A logged-in user supplying a userId that differs from their own ID must
-     * receive a JSON error and must NOT have the agreement saved.
+     * A logged-out request (is_user_logged_in returns false) must be rejected
+     * even if the nonce passes, so userId=0 cannot be used to bypass the check.
      */
-    public function test_savePolicyAgreement_rejects_userId_that_does_not_match_current_user(): void
+    public function test_savePolicyAgreement_rejects_logged_out_user(): void
     {
         $_POST['security'] = 'fake_nonce';
-        $_POST['userId']   = '1';   // targeting admin (user 1)
         $_POST['policyId'] = '5';
 
         Functions\when('check_ajax_referer')->justReturn(true);
-        Functions\when('get_current_user_id')->justReturn(2);  // logged in as user 2
-        Functions\when('get_post_meta')->justReturn([]);
-        Functions\when('update_post_meta')->justReturn(true);
-        Functions\when('get_user_meta')->justReturn([]);
-        Functions\when('add_user_meta')->justReturn(1);
+        Functions\when('is_user_logged_in')->justReturn(false);
+        Functions\when('get_current_user_id')->justReturn(0);
         Functions\when('wp_kses_post')->returnArg();
 
         Functions\expect('wp_send_json_error')->once();
@@ -57,20 +55,22 @@ class PolicyWallSecurityTest extends TestCase
     }
 
     /**
-     * A logged-in user supplying their own userId must succeed normally.
+     * A logged-in user with a valid pw_policies post must succeed normally.
      */
-    public function test_savePolicyAgreement_allows_own_user_id(): void
+    public function test_savePolicyAgreement_allows_logged_in_user_with_valid_policy(): void
     {
         $_POST['security'] = 'fake_nonce';
-        $_POST['userId']   = '2';
         $_POST['policyId'] = '5';
 
         Functions\when('check_ajax_referer')->justReturn(true);
+        Functions\when('is_user_logged_in')->justReturn(true);
         Functions\when('get_current_user_id')->justReturn(2);
+        Functions\when('get_post_type')->justReturn('pw_policies');
         Functions\when('get_post_meta')->justReturn([]);
         Functions\when('update_post_meta')->justReturn(true);
         Functions\when('get_user_meta')->justReturn([]);
         Functions\when('add_user_meta')->justReturn(1);
+        Functions\when('update_user_meta')->justReturn(true);
         Functions\when('wp_kses_post')->returnArg();
 
         Functions\expect('wp_send_json_success')->once();
@@ -109,15 +109,20 @@ class PolicyWallSecurityTest extends TestCase
     }
 
     /**
-     * A user with manage_options must be allowed to save the policy page ID.
+     * A user with manage_options must be allowed to save the policy page ID
+     * when the supplied post ID is a published post.
      */
     public function test_savePolicyPageIdNumber_allows_user_with_manage_options(): void
     {
         $_POST['security'] = 'fake_nonce';
         $_POST['policyId'] = '10';
 
+        $fakePost              = new stdClass();
+        $fakePost->post_status = 'publish';
+
         Functions\when('check_ajax_referer')->justReturn(true);
         Functions\when('current_user_can')->justReturn(true);
+        Functions\when('get_post')->justReturn($fakePost);
         Functions\when('update_option')->justReturn(true);
         Functions\when('wp_kses_post')->returnArg();
 
