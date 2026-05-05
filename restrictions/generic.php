@@ -81,6 +81,26 @@ class PwGeneric
     }
 
     /**
+     * Roles that bypass the policy check entirely.
+     *
+     * External users (temp logins issued via Temporary Login Without Password)
+     * are not real staff and should not be forced through the policy wall —
+     * they need to land on the redirect target the temp-login plugin sets.
+     *
+     * Filter `pw_bypass_roles` to add or remove roles without editing the plugin.
+     *
+     * @return array<string>
+     */
+    private static function _getBypassedRoles()
+    {
+        $roles = array(
+            'external_user',
+        );
+
+        return apply_filters('pw_bypass_roles', $roles);
+    }
+
+    /**
      * Checks if the logging in user has signed the agreement
      * Sends them to the agreement page if NOT agreed
      *
@@ -209,6 +229,16 @@ class PwGeneric
         foreach ($allowed_caps as $cap) {
             if (user_can($user_object, $cap)) {
                 return true;
+            }
+        }
+
+        $allowed_roles = self::_getBypassedRoles();
+
+        if (! empty($allowed_roles) && isset($user_object->roles) && is_array($user_object->roles)) {
+            foreach ($allowed_roles as $role) {
+                if (in_array($role, $user_object->roles, true)) {
+                    return true;
+                }
             }
         }
 

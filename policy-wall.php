@@ -4,7 +4,7 @@
 Plugin Name: Policy Wall
 Plugin URI: https://sfndesign.ca
 Description: Forces acceptance of site policy before site content access
-Version: 2026.04.29.1044
+Version: 2026.05.05.1243
 Author: ProudCity, Curtis McHale
 Author URI: https://sfndesign.ca
 License: GPLv2 or later

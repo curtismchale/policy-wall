@@ -1,3 +1,10 @@
+## 2026-05-05
+
+### Role-based policy bypass
+- Added role-based bypass to `PwGeneric::hasUserAgreed()` — users in any role returned by the new `pw_bypass_roles` filter skip the policy wall entirely. Default list is `['external_user']` so temporary logins issued to external partners (via Temporary Login Without Password) are not redirected to the policies page and reach their configured landing URL instead.
+- New `pw_bypass_roles` filter — accepts an array of role slugs.
+- Existing capability bypass (`pw_bypass_caps`) is unchanged.
+
 ## 2026-04-29
 
 ### CSV export improvements
