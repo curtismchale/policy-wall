@@ -101,6 +101,130 @@ class PwGeneric
     }
 
     /**
+     * Post IDs that stay reachable without agreeing to the current policy.
+     *
+     * Empty by default. Sites add their own IDs through `pw_allowed_post_ids`
+     * so environment-specific post IDs never get hardcoded into the plugin.
+     *
+     * Example — let everyone read the policy index page:
+     *   add_filter( 'pw_allowed_post_ids', fn( $ids ) => array_merge( $ids, [ 4935 ] ) );
+     *
+     * @since  2026.09.22
+     * @author Curtis <curtis@proudcity.com>
+     *
+     * @return array<int>
+     */
+    private static function _getAllowedPostIds()
+    {
+        $ids = (array) apply_filters('pw_allowed_post_ids', array());
+
+        return array_map('absint', $ids);
+    }
+
+    /**
+     * Taxonomy terms whose content stays reachable without agreeing.
+     *
+     * Keyed by taxonomy, each value an array of term IDs or slugs. Any post
+     * carrying one of those terms is exempt, as is the term's own archive.
+     *
+     * Example — let everyone read documents filed under a policy category:
+     *   add_filter( 'pw_allowed_terms', fn( $t ) => $t + [ 'document_taxonomy' => [ 141 ] ] );
+     *
+     * @since  2026.09.22
+     * @author Curtis <curtis@proudcity.com>
+     *
+     * @return array<string, array>
+     */
+    private static function _getAllowedTerms()
+    {
+        return (array) apply_filters('pw_allowed_terms', array());
+    }
+
+    /**
+     * Returns true when the current request may be viewed without agreeing.
+     *
+     * Users have to be able to read the policies before deciding to accept
+     * them. Without this the wall bounces every link on the policy page back
+     * to the policy page, which reads as a broken link.
+     *
+     * Handles two request shapes: a singular post (checked against both the
+     * allowed IDs and the allowed terms) and a term archive (checked against
+     * the allowed terms only).
+     *
+     * @since  2026.09.22
+     * @author Curtis <curtis@proudcity.com>
+     *
+     * @return bool True when the request is exempt from the policy wall
+     */
+    public static function isExemptFromAgreement()
+    {
+        $allowed_ids   = self::_getAllowedPostIds();
+        $allowed_terms = self::_getAllowedTerms();
+
+        // nothing allowlisted, so nothing to exempt
+        if (empty($allowed_ids) && empty($allowed_terms)) {
+            return false;
+        }
+
+        $queried = get_queried_object();
+
+        if ($queried instanceof \WP_Term) {
+            return self::_isAllowedTerm($queried, $allowed_terms);
+        }
+
+        $post_id = absint(get_queried_object_id());
+
+        if (! $post_id) {
+            return false;
+        }
+
+        if (in_array($post_id, $allowed_ids, true)) {
+            return true;
+        }
+
+        foreach ($allowed_terms as $taxonomy => $terms) {
+            if (empty($terms)) {
+                continue;
+            }
+
+            if (has_term($terms, $taxonomy, $post_id)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Returns true when a queried term archive is allowlisted.
+     *
+     * Matches on term ID or slug so `pw_allowed_terms` can use either.
+     *
+     * @param object $term          required The queried WP_Term
+     * @param array  $allowed_terms required The allowlist keyed by taxonomy
+     *
+     * @since  2026.09.22
+     * @author Curtis <curtis@proudcity.com>
+     *
+     * @return bool
+     */
+    private static function _isAllowedTerm($term, $allowed_terms)
+    {
+        if (empty($allowed_terms[$term->taxonomy])) {
+            return false;
+        }
+
+        $terms = (array) $allowed_terms[$term->taxonomy];
+
+        if (in_array(absint($term->term_id), array_map('absint', $terms), true)) {
+            return true;
+        }
+
+        return in_array($term->slug, $terms, true);
+    }
+
+
+    /**
      * Checks if the logging in user has signed the agreement
      * Sends them to the agreement page if NOT agreed
      *
@@ -149,8 +273,9 @@ class PwGeneric
      * Example — allow a 24-hour grace period:
      *   add_filter( 'pw_policy_grace_period', fn() => DAY_IN_SECONDS );
      *
-     * Skipped for: logged-out visitors, admin pages, AJAX requests, and the
-     * policy page itself (to prevent redirect loops).
+     * Skipped for: logged-out visitors, admin pages, AJAX requests, the policy
+     * page itself (to prevent redirect loops), and anything allowlisted via
+     * `pw_allowed_post_ids` or `pw_allowed_terms` — see isExemptFromAgreement().
      *
      * @since  2026.04.29
      * @author Curtis <curtis@curtismchale.ca>
@@ -170,6 +295,13 @@ class PwGeneric
 
         $user = wp_get_current_user();
         if (self::hasUserAgreed($user)) {
+            return;
+        }
+
+        // Content a user is allowed to read before they agree. Checked after
+        // hasUserAgreed() so the term lookups only run for the users who are
+        // actually being walled, not on every front-end request.
+        if (self::isExemptFromAgreement()) {
             return;
         }
 

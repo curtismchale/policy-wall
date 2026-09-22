@@ -1,3 +1,32 @@
+## 2026.09.22.1023
+
+Addresses [saintra#57](https://github.com/proudcity/saintra/issues/57).
+
+### Content allowlist — read the policies before agreeing to them
+- Added `PwGeneric::isExemptFromAgreement()`, checked inside `enforceAgreementForActiveSession()`. Previously the wall redirected every front-end request back to the policy page, so the document links listed alongside the policy looked broken to anyone who had not agreed yet.
+- New `pw_allowed_post_ids` filter — an array of post IDs that stay readable before agreement. Empty by default.
+- New `pw_allowed_terms` filter — an array of taxonomy terms (by ID or slug) keyed by taxonomy, e.g. `['document_taxonomy' => [141]]`. Any post carrying one of those terms is exempt, as is the term's own archive. Empty by default.
+- Both filters default to empty so no site-specific IDs live in the plugin.
+- The exemption check runs *after* `hasUserAgreed()`, so the term lookups only cost a query for users who are actually being walled.
+
+### Post-agreement guidance
+- `savePolicyAgreement()` now returns `redirect`, `redirectLabel`, and `redirectDelay` alongside the existing message. Agreeing unlocks the site, but nothing on the page said so and users did not know what to do next.
+- New `pw_post_agreement_redirect` filter (default `home_url('/')`) — where the user is sent after agreeing.
+- New `pw_post_agreement_redirect_label` filter (default "You may now proceed to the home page.") — the link text.
+- New `pw_post_agreement_redirect_delay` filter (default `5000`) — milliseconds before the automatic redirect. Set to `0` to show the link and leave the user where they are. Negative values are clamped to `0`.
+- Front-end JS: replaced `typeAndFade()` with `typeMessage()`. The confirmation no longer fades out after five seconds — it stays on screen with the proceed link beneath it.
+- Front-end JS: `wp_send_json_error()` responses were silently swallowed because they carry no `success` key. Their messages now display.
+- Front-end JS: repeat clicks no longer stack duplicate proceed links.
+- Styles: `.pw-button-wrapper a { text-decoration: none }` was flattening the new proceed link, so the underline is restored for `.pw-proceed a`.
+
+### Agreed Users access
+- `agreedUsersAction()` now checks `pw_view_agreed_cap` before adding the row link. The link was shown to every user who could edit a policy, but the page behind it requires `manage_options` — anyone below that got "Sorry, you are not allowed to access this page" (regression from the 2026-04-29 capability change). The page's own `current_user_can()` guard is unchanged.
+
+### Tests
+- New `PolicyWallAllowlistTest` — 14 tests covering both filters, ID and slug term matching, term archives, taxonomy isolation, the empty-term-list guard, and the end-to-end no-redirect case.
+- New `PolicyWallPostAgreementTest` — 14 tests covering the redirect target/label/delay filters and their escaping, the AJAX payload on success and failure, and the row-action capability gate.
+- `tests/stubs.php` — added `get_queried_object`, `get_queried_object_id`, `has_term`, `home_url`, `esc_url_raw`, `__`, and a `WP_Term` class stub.
+
 ## 2026-05-05
 
 ### Role-based policy bypass

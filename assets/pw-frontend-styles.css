@@ -26,3 +26,12 @@
 .pw-button-wrapper a:hover,
 .pw-button-wrapper a:focus
 {opacity:9}
+
+/* The wrapper strips link underlines for the Agree button. The proceed link
+   that appears after agreeing is a plain text link, so put them back. */
+.pw-button-wrapper .pw-proceed{
+  margin-top:10px;
+  font-weight:bold;
+}
+
+.pw-button-wrapper .pw-proceed a{text-decoration:underline;}

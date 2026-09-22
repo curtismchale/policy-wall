@@ -4,7 +4,7 @@
 Plugin Name: Policy Wall
 Plugin URI: https://sfndesign.ca
 Description: Forces acceptance of site policy before site content access
-Version: 2026.05.05.1243
+Version: 2026.09.22.1023
 Author: ProudCity, Curtis McHale
 Author URI: https://sfndesign.ca
 License: GPLv2 or later
@@ -98,6 +98,11 @@ class PolicyWall
 
         // return early if we're not on the post type we want
         if ('pw_policies' !== $post->post_type) {
+            return $actions;
+        }
+
+        // don't advertise a page the user will just get bounced out of
+        if (! current_user_can(apply_filters('pw_view_agreed_cap', 'manage_options'))) {
             return $actions;
         }
 
@@ -548,10 +553,66 @@ class PolicyWall
         }
 
         wp_send_json_success(array(
-            'success' => (bool) $success,
-            'message' => wp_kses_post($message),
+            'success'       => (bool) $success,
+            'message'       => wp_kses_post($message),
+            'redirect'      => $success ? self::getPostAgreementRedirect() : '',
+            'redirectLabel' => $success ? self::getPostAgreementRedirectLabel() : '',
+            'redirectDelay' => $success ? self::getPostAgreementRedirectDelay() : 0,
         ));
     } // savePolicyAgreement
+
+    /**
+     * Where a user is sent once they have agreed to the policy
+     *
+     * Agreeing unlocks the rest of the site, but nothing on the policy page
+     * tells the user that. Handing the JS a destination lets it offer a link
+     * and move the user along instead of leaving them on a dead-end page.
+     *
+     * @since  2026.09.22
+     * @author Curtis <curtis@proudcity.com>
+     *
+     * @return string The URL to send the user to
+     */
+    public static function getPostAgreementRedirect()
+    {
+        return esc_url_raw(apply_filters('pw_post_agreement_redirect', home_url('/')));
+    }
+
+    /**
+     * The link text shown under the Agree button after a successful agreement
+     *
+     * @since  2026.09.22
+     * @author Curtis <curtis@proudcity.com>
+     *
+     * @return string
+     */
+    public static function getPostAgreementRedirectLabel()
+    {
+        $label = apply_filters(
+            'pw_post_agreement_redirect_label',
+            __('You may now proceed to the home page.', 'policywall')
+        );
+
+        return esc_html($label);
+    }
+
+    /**
+     * How long to wait, in milliseconds, before redirecting after agreement
+     *
+     * Set the `pw_post_agreement_redirect_delay` filter to 0 to leave the user
+     * on the policy page with only the link, and no automatic redirect.
+     *
+     * @since  2026.09.22
+     * @author Curtis <curtis@proudcity.com>
+     *
+     * @return int Milliseconds to wait, 0 disables the automatic redirect
+     */
+    public static function getPostAgreementRedirectDelay()
+    {
+        $delay = (int) apply_filters('pw_post_agreement_redirect_delay', 5000);
+
+        return max(0, $delay);
+    }
 
     /**
      * Saves the current policyId to usermeta

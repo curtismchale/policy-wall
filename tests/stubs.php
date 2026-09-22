@@ -120,4 +120,36 @@ namespace {
     if (!function_exists('get_user_meta')) {
         function get_user_meta(): mixed { return ''; }
     }
+    if (!function_exists('get_queried_object')) {
+        function get_queried_object(): mixed { return null; }
+    }
+    if (!function_exists('get_queried_object_id')) {
+        function get_queried_object_id(): int { return 0; }
+    }
+    if (!function_exists('has_term')) {
+        function has_term(): bool { return false; }
+    }
+    if (!function_exists('home_url')) {
+        function home_url(string $path = ''): string { return 'https://example.com' . $path; }
+    }
+    if (!function_exists('esc_url_raw')) {
+        function esc_url_raw(string $url): string { return $url; }
+    }
+    if (!function_exists('__')) {
+        function __(string $text, string $domain = 'default'): string { return $text; }
+    }
+    // Stand-in for the real WP_Term so isExemptFromAgreement() can take its
+    // term-archive branch under test.
+    if (!class_exists('WP_Term')) {
+        class WP_Term {
+            public $term_id;
+            public $slug;
+            public $taxonomy;
+            public function __construct(int $term_id = 0, string $slug = '', string $taxonomy = '') {
+                $this->term_id  = $term_id;
+                $this->slug     = $slug;
+                $this->taxonomy = $taxonomy;
+            }
+        }
+    }
 }

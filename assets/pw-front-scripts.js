@@ -1,21 +1,50 @@
 jQuery(document).ready(function ($) {
 
-  function typeAndFade(selector, newText, typingSpeed = 50, fadeDuration = 5000) {
-    const $el = $(selector);
-    $el.empty(); // Clear existing content
+  /**
+   * Types text into an element one character at a time and leaves it there.
+   *
+   * The message used to fade out after a few seconds, which meant users lost
+   * the confirmation — and the "proceed" link that follows it — before they
+   * had a chance to read either one.
+   */
+  function typeMessage($el, newText, onComplete, typingSpeed) {
+    typingSpeed = typingSpeed || 50;
 
-    let i = 0;
-    const interval = setInterval(() => {
+    $el.stop(true, true).empty().show();
+
+    var i = 0;
+    var interval = setInterval(function () {
       $el.append(newText.charAt(i));
       i++;
       if (i >= newText.length) {
         clearInterval(interval);
-        // Wait a moment, then fade out
-        setTimeout(() => {
-          $el.fadeOut(fadeDuration);
-        }, 800); // small delay before fade
+        if (typeof onComplete === 'function') {
+          onComplete();
+        }
       }
     }, typingSpeed);
+  }
+
+  /**
+   * Renders the "you may now proceed" link under the feedback message and,
+   * unless the delay is 0, sends the user there after it.
+   */
+  function offerProceedLink($after, payload) {
+    if (!payload.redirect) {
+      return;
+    }
+
+    var $link = $('<a></a>')
+      .attr('href', payload.redirect)
+      .text(payload.redirectLabel || payload.redirect);
+
+    $after.after($('<p class="pw-proceed"></p>').append($link));
+
+    if (payload.redirectDelay > 0) {
+      setTimeout(function () {
+        window.location.href = payload.redirect;
+      }, payload.redirectDelay);
+    }
   }
 
   $buttonWrapper = $('.pw-button-wrapper');
@@ -32,6 +61,9 @@ jQuery(document).ready(function ($) {
       .css('display', 'inline-block')
       .fadeIn(200);
 
+    // drop any link left over from a previous click
+    $($buttonWrapper).find('.pw-proceed').remove();
+
     var data = {
       'action': 'savePolicyAgreement',
       'userId': $userId,
@@ -44,13 +76,23 @@ jQuery(document).ready(function ($) {
       // fadeout spinner
       $($spinner).fadeOut(200);
 
-      if (true === response.data.success) {
-        typeAndFade($userFeedback, response.data.message);
-      } // yup
-
-      if (false === response.data.success) {
-        typeAndFade($userFeedback, response.data.message);
+      if (!response || !response.data) {
+        return;
       }
+
+      var payload = response.data;
+
+      // wp_send_json_error() responses carry a message but no success key,
+      // so treat anything that isn't an explicit success as a failure.
+      var succeeded = false !== response.success && true === payload.success;
+
+      typeMessage($userFeedback, payload.message, function () {
+        if (!succeeded) {
+          return;
+        }
+
+        offerProceedLink($userFeedback, payload);
+      });
 
     }); // end ajax post
 
@@ -66,4 +108,3 @@ jQuery(document).ready(function ($) {
   })
 
 });
-
